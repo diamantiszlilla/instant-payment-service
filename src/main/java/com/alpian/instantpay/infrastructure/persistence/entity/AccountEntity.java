@@ -1,5 +1,6 @@
 package com.alpian.instantpay.infrastructure.persistence.entity;
 
+import com.alpian.instantpay.infrastructure.persistence.converter.EncryptionAttributeConverter;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,12 +11,12 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-@Entity
-@Table(name = "accounts")
 @Data
+@Entity
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(name = "accounts")
 public class AccountEntity {
 
     @Id
