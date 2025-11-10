@@ -31,6 +31,9 @@ public class PaymentController {
 
         String senderUsername = authentication.getName();
 
+        log.info("Payment request received: sender={}, recipient={}, amount={}, idempotencyKey={}",
+                senderUsername, request.recipientAccountId(), request.amount(), idempotencyKey);
+
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 }
