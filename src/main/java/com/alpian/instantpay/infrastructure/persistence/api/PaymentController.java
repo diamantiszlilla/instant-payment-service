@@ -2,7 +2,10 @@ package com.alpian.instantpay.infrastructure.persistence.api;
 
 import com.alpian.instantpay.infrastructure.persistence.api.dto.PaymentRequest;
 import com.alpian.instantpay.infrastructure.persistence.api.dto.PaymentResponse;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,19 @@ import java.util.UUID;
 @Tag(name = "Payments", description = "Payment processing API")
 public class PaymentController {
 
+    @Operation(
+            summary = "Process payment",
+            description = """
+                    Transfers money from authenticated user's account to recipient's account.
+                    Idempotency-Key Header is required to avoid duplicate processing.
+                    """)
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successful payment"),
+            @ApiResponse(responseCode = "400", description = "Invalid request (fund issue)"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized (missing or invalid jwt)"),
+            @ApiResponse(responseCode = "404", description = "No account found"),
+            @ApiResponse(responseCode = "409", description = "Conflict (idempotency issue or locking failure)")
+    })
     @PostMapping
     public ResponseEntity<PaymentResponse> sendPayment(
             @Valid @RequestBody PaymentRequest request,
