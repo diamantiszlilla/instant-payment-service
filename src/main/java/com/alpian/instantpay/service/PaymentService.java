@@ -39,8 +39,12 @@ public class PaymentService {
     @Transactional
     public PaymentResponse sendMoney(PaymentRequest request, UUID idempotencyKey, String senderUsername) {
         log.info("payment_send requested: sender={}, recip={}, amount={}, currency={}, idemKey={}",
-                senderUsername, request.recipientAccountId(), request.amount(),
-                request.currency(), truncateIdem(idempotencyKey));
+                senderUsername,
+                maskUuid(request.recipientAccountId()),
+                request.amount(),
+                request.currency(),
+                truncateIdem(idempotencyKey)
+        );
 
         transactionRepository.findByIdempotencyKey(idempotencyKey).ifPresent(existing -> {
             log.warn("duplicate_idempotency_key: idemKey={}", truncateIdem(idempotencyKey));
@@ -67,7 +71,10 @@ public class PaymentService {
         var newSenderBalance = senderAccount.getBalance().subtract(request.amount());
         if (newSenderBalance.compareTo(BigDecimal.ZERO) < 0) {
             log.warn("insufficient_funds: accountId={}, balance={}, requested={}",
-                    senderAccount.getId(), senderAccount.getBalance(), request.amount());
+                    maskUuid(senderAccount.getId()),
+                    senderAccount.getBalance(),
+                    request.amount()
+            );
             throw new InsufficientFundsException("Insufficient funds");
         }
 
@@ -91,7 +98,7 @@ public class PaymentService {
         outboxEventRepository.save(outbox);
 
         log.info("payment_processed: txId={}, amount={}, currency={}",
-                tx.getId(), tx.getAmount(), tx.getCurrency());
+                maskUuid(tx.getId()), tx.getAmount(), tx.getCurrency());
 
         return paymentMapper.toPaymentResponse(tx);
     }
@@ -107,7 +114,7 @@ public class PaymentService {
                     .status(OutboxEventEntity.EventStatus.PENDING)
                     .build();
         } catch (Exception e) {
-            log.error("outbox_creation_failed: txId={}", transaction.getId(), e);
+            log.error("outbox_creation_failed: txId={}", maskUuid(transaction.getId()), e);
             throw new RuntimeException("Failed to create outbox event", e);
         }
     }
@@ -128,7 +135,7 @@ public class PaymentService {
             UUID transactionId,
             UUID senderAccountId,
             UUID recipientAccountId,
-            java.math.BigDecimal amount,
+            BigDecimal amount,
             String currency,
             String status,
             java.time.OffsetDateTime createdAt
@@ -147,7 +154,7 @@ public class PaymentService {
         }
     }
 
-    private void ensurePositiveAmount(java.math.BigDecimal amount) {
+    private void ensurePositiveAmount(BigDecimal amount) {
         if (amount == null || amount.signum() <= 0) {
             throw new IllegalArgumentException("Amount must be positive");
         }
@@ -157,5 +164,11 @@ public class PaymentService {
         if (key == null) return null;
         String s = key.toString();
         return s.substring(0, 8) + "..." + s.substring(s.length() - 4);
+    }
+
+    private String maskUuid(UUID id) {
+        if (id == null) return null;
+        String s = id.toString();
+        return s.substring(0, 8) + "****" + s.substring(s.length() - 4);
     }
 }
