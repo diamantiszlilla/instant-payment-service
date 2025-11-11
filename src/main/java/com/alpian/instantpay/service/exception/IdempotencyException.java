@@ -10,4 +10,3 @@ public class IdempotencyException extends RuntimeException {
         super(message, cause);
     }
 }
-
