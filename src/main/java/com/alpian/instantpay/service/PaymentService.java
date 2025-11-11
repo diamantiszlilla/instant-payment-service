@@ -3,11 +3,13 @@ package com.alpian.instantpay.service;
 import com.alpian.instantpay.api.dto.PaymentRequest;
 import com.alpian.instantpay.api.dto.PaymentResponse;
 import com.alpian.instantpay.infrastructure.persistence.entity.AccountEntity;
+import com.alpian.instantpay.infrastructure.persistence.entity.TransactionEntity;
 import com.alpian.instantpay.infrastructure.persistence.entity.UserEntity;
 import com.alpian.instantpay.infrastructure.persistence.repository.AccountRepository;
 import com.alpian.instantpay.infrastructure.persistence.repository.OutboxEventRepository;
 import com.alpian.instantpay.infrastructure.persistence.repository.TransactionRepository;
 import com.alpian.instantpay.infrastructure.persistence.repository.UserRepository;
+import com.alpian.instantpay.service.exception.IdempotencyException;
 import com.alpian.instantpay.service.exception.InsufficientFundsException;
 import com.alpian.instantpay.service.mapper.PaymentMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,6 +40,11 @@ public class PaymentService {
         log.info("payment_send requested: sender={}, recip={}, amount={}, currency={}, idemKey={}",
                 senderUsername, request.recipientAccountId(), request.amount(), request.currency(), truncateIdem(idempotencyKey));
 
+        transactionRepository.findByIdempotencyKey(idempotencyKey).ifPresent(existing -> {
+            log.warn("duplicate_idempotency_key: idemKey={}", truncateIdem(idempotencyKey));
+            throw new IdempotencyException("Transaction already processed");
+        });
+
         UserEntity sender = userRepository.findByUsername(senderUsername)
                 .orElseThrow(() -> new AccountNotFoundException("User not found: " + senderUsername));
 
@@ -56,6 +63,7 @@ public class PaymentService {
         ensurePositiveAmount(request.amount());
 
         BigDecimal newSenderBalance = senderAccount.getBalance().subtract(request.amount());
+
         if (newSenderBalance.compareTo(BigDecimal.ZERO) < 0) {
             log.warn("insufficient_funds: accountId={}, balance={}, requested={}", senderAccount.getId(), senderAccount.getBalance(), request.amount());
             throw new InsufficientFundsException("Insufficient funds");
@@ -63,6 +71,15 @@ public class PaymentService {
 
         senderAccount.setBalance(newSenderBalance);
         recipientAccount.setBalance(recipientAccount.getBalance().add(request.amount()));
+
+        TransactionEntity tx = TransactionEntity.builder()
+                .senderAccount(senderAccount)
+                .recipientAccount(recipientAccount)
+                .amount(request.amount())
+                .currency(request.currency())
+                .status(TransactionEntity.TransactionStatus.COMPLETED)
+                .idempotencyKey(idempotencyKey)
+                .build();
 
         throw new UnsupportedOperationException("WIP");
     }
