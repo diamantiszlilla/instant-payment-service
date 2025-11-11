@@ -68,7 +68,7 @@ public class PaymentService {
         ensureDifferentAccounts(senderAccount.getId(), recipientAccount.getId());
         ensurePositiveAmount(request.amount());
 
-        var newSenderBalance = senderAccount.getBalance().subtract(request.amount());
+        BigDecimal newSenderBalance = senderAccount.getBalance().subtract(request.amount());
         if (newSenderBalance.compareTo(BigDecimal.ZERO) < 0) {
             log.warn("insufficient_funds: accountId={}, balance={}, requested={}",
                     maskUuid(senderAccount.getId()),
@@ -94,7 +94,7 @@ public class PaymentService {
         accountRepository.save(recipientAccount);
         transactionRepository.save(tx);
 
-        var outbox = createOutboxEvent(tx);
+        OutboxEventEntity outbox = createOutboxEvent(tx);
         outboxEventRepository.save(outbox);
 
         log.info("payment_processed: txId={}, amount={}, currency={}",
