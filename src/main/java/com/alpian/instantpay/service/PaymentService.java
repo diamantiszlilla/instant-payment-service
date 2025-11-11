@@ -2,6 +2,8 @@ package com.alpian.instantpay.service;
 
 import com.alpian.instantpay.api.dto.PaymentRequest;
 import com.alpian.instantpay.api.dto.PaymentResponse;
+import com.alpian.instantpay.infrastructure.persistence.entity.AccountEntity;
+import com.alpian.instantpay.infrastructure.persistence.entity.UserEntity;
 import com.alpian.instantpay.infrastructure.persistence.repository.AccountRepository;
 import com.alpian.instantpay.infrastructure.persistence.repository.OutboxEventRepository;
 import com.alpian.instantpay.infrastructure.persistence.repository.TransactionRepository;
@@ -13,6 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.security.auth.login.AccountNotFoundException;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -28,7 +32,45 @@ public class PaymentService {
     private final ObjectMapper objectMapper;
 
     @Transactional
-    public PaymentResponse sendMoney(PaymentRequest request, UUID idempotencyKey, String senderUsername) {
-        return new PaymentResponse(null, null, null, null, null, null, null);
+    public PaymentResponse sendMoney(PaymentRequest request, UUID idempotencyKey, String senderUsername) throws AccountNotFoundException {
+        log.info("payment_send requested: sender={}, recip={}, amount={}, currency={}, idemKey={}",
+                senderUsername, request.recipientAccountId(), request.amount(), request.currency(), truncateIdem(idempotencyKey));
+
+        UserEntity sender = userRepository.findByUsername(senderUsername)
+                .orElseThrow(() -> new AccountNotFoundException("User not found: " + senderUsername));
+
+
+        List<AccountEntity> senderAccounts = accountRepository.findByUserId(sender.getId());
+        if (senderAccounts.isEmpty()) {
+            throw new AccountNotFoundException("No account found for user: " + senderUsername);
+        }
+        AccountEntity senderAccount = senderAccounts.get(0);
+
+        AccountEntity recipientAccount = accountRepository.findById(request.recipientAccountId())
+                .orElseThrow(() -> new AccountNotFoundException("Recipient account not found: " + request.recipientAccountId()));
+
+        ensureCurrenciesMatch(senderAccount.getCurrency(), request.currency(), "sender");
+        ensureCurrenciesMatch(recipientAccount.getCurrency(), request.currency(), "recipient");
+        ensureDifferentAccounts(senderAccount.getId(), recipientAccount.getId());
+
+        throw new UnsupportedOperationException("WIP");
+    }
+
+    private void ensureCurrenciesMatch(String actual, String expected, String role) {
+        if (!actual.equals(expected)) {
+            throw new IllegalArgumentException("Currency mismatch for " + role + ": " + actual + " vs " + expected);
+        }
+    }
+
+    private void ensureDifferentAccounts(UUID senderId, UUID recipientId) {
+        if (senderId.equals(recipientId)) {
+            throw new IllegalArgumentException("Cannot transfer to the same account");
+        }
+    }
+
+    private String truncateIdem(UUID key) {
+        if (key == null) return null;
+        String s = key.toString();
+        return s.substring(0, 8) + "..." + s.substring(s.length() - 4);
     }
 }
