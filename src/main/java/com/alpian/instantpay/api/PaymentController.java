@@ -1,7 +1,8 @@
-package com.alpian.instantpay.infrastructure.persistence.api;
+package com.alpian.instantpay.api;
 
-import com.alpian.instantpay.infrastructure.persistence.api.dto.PaymentRequest;
-import com.alpian.instantpay.infrastructure.persistence.api.dto.PaymentResponse;
+import com.alpian.instantpay.api.dto.PaymentRequest;
+import com.alpian.instantpay.api.dto.PaymentResponse;
+import com.alpian.instantpay.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -23,6 +24,8 @@ import java.util.UUID;
 @RequestMapping("/api/payments")
 @Tag(name = "Payments", description = "Payment processing API")
 public class PaymentController {
+
+    private final PaymentService paymentService;
 
     @Operation(
             summary = "Process payment",
@@ -50,6 +53,8 @@ public class PaymentController {
         log.info("Payment request received: sender={}, recipient={}, amount={}, idempotencyKey={}",
                 senderUsername, request.recipientAccountId(), request.amount(), idempotencyKey);
 
-        return ResponseEntity.status(HttpStatus.OK).build();
+        PaymentResponse paymentResponse = paymentService.sendMoney(request, idempotencyKey, senderUsername);
+
+        return ResponseEntity.status(HttpStatus.OK).body(paymentResponse);
     }
 }
