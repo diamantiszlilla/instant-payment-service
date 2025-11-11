@@ -8,6 +8,7 @@ import com.alpian.instantpay.infrastructure.persistence.repository.AccountReposi
 import com.alpian.instantpay.infrastructure.persistence.repository.OutboxEventRepository;
 import com.alpian.instantpay.infrastructure.persistence.repository.TransactionRepository;
 import com.alpian.instantpay.infrastructure.persistence.repository.UserRepository;
+import com.alpian.instantpay.service.exception.InsufficientFundsException;
 import com.alpian.instantpay.service.mapper.PaymentMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.security.auth.login.AccountNotFoundException;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,7 +41,6 @@ public class PaymentService {
         UserEntity sender = userRepository.findByUsername(senderUsername)
                 .orElseThrow(() -> new AccountNotFoundException("User not found: " + senderUsername));
 
-
         List<AccountEntity> senderAccounts = accountRepository.findByUserId(sender.getId());
         if (senderAccounts.isEmpty()) {
             throw new AccountNotFoundException("No account found for user: " + senderUsername);
@@ -52,6 +53,16 @@ public class PaymentService {
         ensureCurrenciesMatch(senderAccount.getCurrency(), request.currency(), "sender");
         ensureCurrenciesMatch(recipientAccount.getCurrency(), request.currency(), "recipient");
         ensureDifferentAccounts(senderAccount.getId(), recipientAccount.getId());
+        ensurePositiveAmount(request.amount());
+
+        BigDecimal newSenderBalance = senderAccount.getBalance().subtract(request.amount());
+        if (newSenderBalance.compareTo(BigDecimal.ZERO) < 0) {
+            log.warn("insufficient_funds: accountId={}, balance={}, requested={}", senderAccount.getId(), senderAccount.getBalance(), request.amount());
+            throw new InsufficientFundsException("Insufficient funds");
+        }
+
+        senderAccount.setBalance(newSenderBalance);
+        recipientAccount.setBalance(recipientAccount.getBalance().add(request.amount()));
 
         throw new UnsupportedOperationException("WIP");
     }
@@ -65,6 +76,12 @@ public class PaymentService {
     private void ensureDifferentAccounts(UUID senderId, UUID recipientId) {
         if (senderId.equals(recipientId)) {
             throw new IllegalArgumentException("Cannot transfer to the same account");
+        }
+    }
+
+    private void ensurePositiveAmount(BigDecimal amount) {
+        if (amount == null || amount.signum() <= 0) {
+            throw new IllegalArgumentException("Amount must be positive");
         }
     }
 
