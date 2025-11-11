@@ -1,4 +1,4 @@
-package com.alpian.instantpay.infrastructure.persistence.api.dto;
+package com.alpian.instantpay.api.dto;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;

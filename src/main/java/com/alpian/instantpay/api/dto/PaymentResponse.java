@@ -1,4 +1,4 @@
-package com.alpian.instantpay.infrastructure.persistence.api.dto;
+package com.alpian.instantpay.api.dto;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
