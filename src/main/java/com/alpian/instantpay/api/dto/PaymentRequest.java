@@ -16,8 +16,10 @@ public record PaymentRequest(
         @Size(min = 3, max = 3, message = "Currency must be exactly 3 characters")
         String currency,
 
+        @NotNull(message = "Sender account ID is required")
+        UUID senderAccountId,
+
         @NotNull(message = "Recipient account ID is required")
         UUID recipientAccountId
 ) {
 }
-
