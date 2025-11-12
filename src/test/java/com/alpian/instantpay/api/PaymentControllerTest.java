@@ -78,6 +78,7 @@ class PaymentControllerTest {
         validRequest = new PaymentRequest(
                 new BigDecimal("100.00"),
                 "USD",
+                UUID.randomUUID(),
                 UUID.randomUUID()
         );
     }
@@ -98,6 +99,7 @@ class PaymentControllerTest {
         PaymentRequest invalidRequest = new PaymentRequest(
                 new BigDecimal("-100.00"),
                 "USD",
+                UUID.randomUUID(),
                 UUID.randomUUID()
         );
 
