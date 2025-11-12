@@ -12,9 +12,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.stream.Collectors;
 
@@ -159,5 +161,33 @@ public class GlobalExceptionHandler {
                 request.getDescription(false).replace("uri=", "")
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ErrorResponse> handleMissingRequestHeader(
+            MissingRequestHeaderException ex, WebRequest request) {
+        log.warn("Missing request header: {}", ex.getHeaderName());
+        ErrorResponse error = new ErrorResponse(
+                "Missing required header: " + ex.getHeaderName(),
+                "MISSING_REQUEST_HEADER",
+                HttpStatus.BAD_REQUEST.value(),
+                request.getDescription(false).replace("uri=", "")
+        );
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatch(
+            MethodArgumentTypeMismatchException ex, WebRequest request) {
+        String name = ex.getName();
+        String requiredType = ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "required type";
+        log.warn("Type mismatch for '{}': value='{}', requiredType={}", name, ex.getValue(), requiredType);
+        ErrorResponse error = new ErrorResponse(
+                "Invalid value for '" + name + "': expected " + requiredType,
+                "TYPE_MISMATCH",
+                HttpStatus.BAD_REQUEST.value(),
+                request.getDescription(false).replace("uri=", "")
+        );
+        return ResponseEntity.badRequest().body(error);
     }
 }
