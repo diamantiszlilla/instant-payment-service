@@ -5,11 +5,9 @@ import com.alpian.instantpay.api.dto.PaymentResponse;
 import com.alpian.instantpay.infrastructure.persistence.entity.AccountEntity;
 import com.alpian.instantpay.infrastructure.persistence.entity.OutboxEventEntity;
 import com.alpian.instantpay.infrastructure.persistence.entity.TransactionEntity;
-import com.alpian.instantpay.infrastructure.persistence.entity.UserEntity;
 import com.alpian.instantpay.infrastructure.persistence.repository.AccountRepository;
 import com.alpian.instantpay.infrastructure.persistence.repository.OutboxEventRepository;
 import com.alpian.instantpay.infrastructure.persistence.repository.TransactionRepository;
-import com.alpian.instantpay.infrastructure.persistence.repository.UserRepository;
 import com.alpian.instantpay.service.exception.AccountNotFoundException;
 import com.alpian.instantpay.service.exception.IdempotencyException;
 import com.alpian.instantpay.service.exception.InsufficientFundsException;
@@ -17,29 +15,30 @@ import com.alpian.instantpay.service.mapper.PaymentMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
+    public static final int EXPECTED_SCALE = 2;
 
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
     private final OutboxEventRepository outboxEventRepository;
-    private final UserRepository userRepository;
     private final PaymentMapper paymentMapper;
     private final ObjectMapper objectMapper;
 
     @Transactional
     public PaymentResponse sendMoney(PaymentRequest request, UUID idempotencyKey, String senderUsername) {
-        log.info("payment_send requested: sender={}, recip={}, amount={}, currency={}, idemKey={}",
+        log.info("payment_send requested: sender={}, senderAccount={}, recip={}, amount={}, currency={}, idemKey={}",
                 senderUsername,
+                maskUuid(request.senderAccountId()),
                 maskUuid(request.recipientAccountId()),
                 request.amount(),
                 request.currency(),
@@ -51,22 +50,23 @@ public class PaymentService {
             throw new IdempotencyException("Transaction already processed");
         });
 
-        UserEntity sender = userRepository.findByUsername(senderUsername)
-                .orElseThrow(() -> new AccountNotFoundException("User not found: " + senderUsername));
+        AccountEntity senderAccount = accountRepository.findByIdForUpdate(request.senderAccountId())
+                .orElseThrow(() -> new AccountNotFoundException("Sender account not found: " + request.senderAccountId()));
 
-        List<AccountEntity> senderAccounts = accountRepository.findByUserId(sender.getId());
-        if (senderAccounts.isEmpty()) {
-            throw new AccountNotFoundException("No account found for user: " + senderUsername);
+        if (!senderAccount.getUser().getUsername().equals(senderUsername)) {
+            log.warn("authorization_failure: user '{}' attempted to use account '{}' which is not theirs.",
+                    senderUsername, maskUuid(senderAccount.getId()));
+            throw new AccessDeniedException("User does not own this account");
         }
-        AccountEntity senderAccount = senderAccounts.getFirst();
 
-        AccountEntity recipientAccount = accountRepository.findById(request.recipientAccountId())
+        AccountEntity recipientAccount = accountRepository.findByIdForUpdate(request.recipientAccountId())
                 .orElseThrow(() -> new AccountNotFoundException("Recipient account not found: " + request.recipientAccountId()));
 
         ensureCurrenciesMatch(senderAccount.getCurrency(), request.currency(), "sender");
         ensureCurrenciesMatch(recipientAccount.getCurrency(), request.currency(), "recipient");
         ensureDifferentAccounts(senderAccount.getId(), recipientAccount.getId());
         ensurePositiveAmount(request.amount());
+        ensureValidCurrencyScale(request.amount(), request.currency());
 
         BigDecimal newSenderBalance = senderAccount.getBalance().subtract(request.amount());
         if (newSenderBalance.compareTo(BigDecimal.ZERO) < 0) {
@@ -157,6 +157,14 @@ public class PaymentService {
     private void ensurePositiveAmount(BigDecimal amount) {
         if (amount == null || amount.signum() <= 0) {
             throw new IllegalArgumentException("Amount must be positive");
+        }
+    }
+
+    private void ensureValidCurrencyScale(BigDecimal amount, String currency) {
+        if (amount.scale() > EXPECTED_SCALE) {
+            log.warn("invalid_amount_scale: scale={}, expected={}", amount.scale(), EXPECTED_SCALE);
+            throw new IllegalArgumentException("Amount scale (" + amount.scale() +
+                    ") exceeds the allowed scale for currency " + currency + " (" + EXPECTED_SCALE + ")");
         }
     }
 
