@@ -1,6 +1,5 @@
-package com.alpian.instantpay.infrastructure.converter;
+package com.alpian.instantpay.infrastructure.persistence.converter;
 
-import com.alpian.instantpay.infrastructure.persistence.converter.EncryptionAttributeConverter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
