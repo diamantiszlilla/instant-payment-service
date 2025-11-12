@@ -41,7 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({SecurityConfig.class, JwtTokenProvider.class, JwtAuthenticationFilter.class})
 @TestPropertySource(properties = {
         "jwt.secret=test-jwt-secret-key-must-be-at-least-32-characters-long-for-testing-purposes",
-        "jwt.expiration=3600000",
+        "jwt.expirationMillis=3600000",
         "pii.encryption.key=VTgDasP1R776SZNpu+5p+KYyznjZUaGbzBO2Pfs7rAY="
 })
 @DisplayName("PaymentController Integration Tests")
