@@ -8,7 +8,6 @@ import com.alpian.instantpay.infrastructure.persistence.entity.UserEntity;
 import com.alpian.instantpay.infrastructure.persistence.repository.AccountRepository;
 import com.alpian.instantpay.infrastructure.persistence.repository.OutboxEventRepository;
 import com.alpian.instantpay.infrastructure.persistence.repository.TransactionRepository;
-import com.alpian.instantpay.infrastructure.persistence.repository.UserRepository;
 import com.alpian.instantpay.service.exception.AccountNotFoundException;
 import com.alpian.instantpay.service.exception.IdempotencyException;
 import com.alpian.instantpay.service.exception.InsufficientFundsException;
@@ -43,8 +42,6 @@ class PaymentServiceTest {
     private TransactionRepository transactionRepository;
     @Mock
     private OutboxEventRepository outboxEventRepository;
-    @Mock
-    private UserRepository userRepository;
     @Mock
     private PaymentMapper paymentMapper;
     @Mock
@@ -105,6 +102,7 @@ class PaymentServiceTest {
         paymentRequest = new PaymentRequest(
                 new BigDecimal("100.00"),
                 "USD",
+                senderAccountId,
                 recipientAccountId
         );
     }
@@ -114,11 +112,9 @@ class PaymentServiceTest {
     void shouldSuccessfullyProcessPayment() throws Exception {
         when(transactionRepository.findByIdempotencyKey(idempotencyKey))
                 .thenReturn(Optional.empty());
-        when(userRepository.findByUsername("sender"))
-                .thenReturn(Optional.of(senderUser));
-        when(accountRepository.findByUserId(senderUser.getId()))
-                .thenReturn(List.of(senderAccount));
-        when(accountRepository.findById(recipientAccountId))
+        when(accountRepository.findByIdForUpdate(senderAccountId))
+                .thenReturn(Optional.of(senderAccount));
+        when(accountRepository.findByIdForUpdate(recipientAccountId))
                 .thenReturn(Optional.of(recipientAccount));
         when(objectMapper.writeValueAsString(any()))
                 .thenReturn("{\"transactionId\":\"test\"}");
@@ -177,11 +173,9 @@ class PaymentServiceTest {
         senderAccount.setBalance(new BigDecimal("50.00"));
         when(transactionRepository.findByIdempotencyKey(idempotencyKey))
                 .thenReturn(Optional.empty());
-        when(userRepository.findByUsername("sender"))
-                .thenReturn(Optional.of(senderUser));
-        when(accountRepository.findByUserId(senderUser.getId()))
-                .thenReturn(List.of(senderAccount));
-        when(accountRepository.findById(recipientAccountId))
+        when(accountRepository.findByIdForUpdate(senderAccountId))
+                .thenReturn(Optional.of(senderAccount));
+        when(accountRepository.findByIdForUpdate(recipientAccountId))
                 .thenReturn(Optional.of(recipientAccount));
 
         assertThatThrownBy(() -> paymentService.sendMoney(paymentRequest, idempotencyKey, "sender"))
@@ -198,14 +192,12 @@ class PaymentServiceTest {
     void shouldThrowAccountNotFoundExceptionWhenSenderAccountNotFound() {
         when(transactionRepository.findByIdempotencyKey(idempotencyKey))
                 .thenReturn(Optional.empty());
-        when(userRepository.findByUsername("sender"))
-                .thenReturn(Optional.of(senderUser));
-        when(accountRepository.findByUserId(senderUser.getId()))
-                .thenReturn(List.of());
+        when(accountRepository.findByIdForUpdate(senderAccountId))
+                .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> paymentService.sendMoney(paymentRequest, idempotencyKey, "sender"))
                 .isInstanceOf(AccountNotFoundException.class)
-                .hasMessageContaining("No account found");
+                .hasMessageContaining("Sender account not found");
 
         verify(accountRepository, never()).save(any());
         verify(transactionRepository, never()).save(any());
@@ -216,11 +208,9 @@ class PaymentServiceTest {
     void shouldThrowAccountNotFoundExceptionWhenRecipientAccountNotFound() {
         when(transactionRepository.findByIdempotencyKey(idempotencyKey))
                 .thenReturn(Optional.empty());
-        when(userRepository.findByUsername("sender"))
-                .thenReturn(Optional.of(senderUser));
-        when(accountRepository.findByUserId(senderUser.getId()))
-                .thenReturn(List.of(senderAccount));
-        when(accountRepository.findById(recipientAccountId))
+        when(accountRepository.findByIdForUpdate(senderAccountId))
+                .thenReturn(Optional.of(senderAccount));
+        when(accountRepository.findByIdForUpdate(recipientAccountId))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> paymentService.sendMoney(paymentRequest, idempotencyKey, "sender"))
@@ -262,11 +252,9 @@ class PaymentServiceTest {
 
         when(transactionRepository.findByIdempotencyKey(idempotencyKey))
                 .thenReturn(Optional.empty());
-        when(userRepository.findByUsername("sender"))
-                .thenReturn(Optional.of(senderUser));
-        when(accountRepository.findByUserId(senderUser.getId()))
-                .thenReturn(List.of(senderAccount));
-        when(accountRepository.findById(paymentRequest.recipientAccountId()))
+        when(accountRepository.findByIdForUpdate(senderAccountId))
+                .thenReturn(Optional.of(senderAccount));
+        when(accountRepository.findByIdForUpdate(paymentRequest.recipientAccountId()))
                 .thenReturn(Optional.of(recipientAccount));
 
         assertThatThrownBy(() -> paymentService.sendMoney(paymentRequest, idempotencyKey, "sender"))
@@ -280,11 +268,9 @@ class PaymentServiceTest {
         recipientAccount.setCurrency("EUR");
         when(transactionRepository.findByIdempotencyKey(idempotencyKey))
                 .thenReturn(Optional.empty());
-        when(userRepository.findByUsername("sender"))
-                .thenReturn(Optional.of(senderUser));
-        when(accountRepository.findByUserId(senderUser.getId()))
-                .thenReturn(List.of(senderAccount));
-        when(accountRepository.findById(recipientAccountId))
+        when(accountRepository.findByIdForUpdate(senderAccountId))
+                .thenReturn(Optional.of(senderAccount));
+        when(accountRepository.findByIdForUpdate(recipientAccountId))
                 .thenReturn(Optional.of(recipientAccount));
 
         assertThatThrownBy(() -> paymentService.sendMoney(paymentRequest, idempotencyKey, "sender"))
@@ -298,20 +284,52 @@ class PaymentServiceTest {
         paymentRequest = new PaymentRequest(
                 new BigDecimal("100.00"),
                 "USD",
+                senderAccountId,
                 senderAccountId
         );
         when(transactionRepository.findByIdempotencyKey(idempotencyKey))
                 .thenReturn(Optional.empty());
-        when(userRepository.findByUsername("sender"))
-                .thenReturn(Optional.of(senderUser));
-        when(accountRepository.findByUserId(senderUser.getId()))
-                .thenReturn(List.of(senderAccount));
-        when(accountRepository.findById(senderAccountId))
+        when(accountRepository.findByIdForUpdate(senderAccountId))
                 .thenReturn(Optional.of(senderAccount));
 
         assertThatThrownBy(() -> paymentService.sendMoney(paymentRequest, idempotencyKey, "sender"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("same account");
     }
-}
 
+    @Test
+    @DisplayName("Should throw AccessDeniedException when user attempts to use account they don't own")
+    void shouldThrowAccessDeniedExceptionWhenUserDoesNotOwnAccount() {
+        UserEntity otherUser = UserEntity.builder()
+                .id(UUID.randomUUID())
+                .username("otheruser")
+                .passwordHash("$2a$10$hashed")
+                .role("USER")
+                .createdAt(OffsetDateTime.now())
+                .build();
+
+        AccountEntity otherUserAccount = AccountEntity.builder()
+                .id(senderAccountId)
+                .user(otherUser)
+                .accountNumber("9999999999")
+                .balance(new BigDecimal("1000.00"))
+                .currency("USD")
+                .version(0L)
+                .createdAt(OffsetDateTime.now())
+                .updatedAt(OffsetDateTime.now())
+                .build();
+
+        when(transactionRepository.findByIdempotencyKey(idempotencyKey))
+                .thenReturn(Optional.empty());
+        when(accountRepository.findByIdForUpdate(senderAccountId))
+                .thenReturn(Optional.of(otherUserAccount));
+
+        assertThatThrownBy(() -> paymentService.sendMoney(paymentRequest, idempotencyKey, "sender"))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class)
+                .hasMessageContaining("User does not own this account");
+
+        verify(accountRepository, never()).save(any());
+        verify(transactionRepository, never()).save(any());
+        verify(outboxEventRepository, never()).save(any());
+    }
+}
