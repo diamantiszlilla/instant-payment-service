@@ -2,12 +2,14 @@ package com.alpian.instantpay;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 @SpringBootApplication
+@ConfigurationPropertiesScan
 public class InstantPaymentServiceApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(InstantPaymentServiceApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(InstantPaymentServiceApplication.class, args);
+    }
 
 }

@@ -12,84 +12,98 @@ import org.springframework.context.event.EventListener;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-
 @Slf4j
 @Component
 @Profile({"dev", "docker"})
 @RequiredArgsConstructor
 public class DevDataInitializer {
-
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
+    private final DevSeedProperties devSeedProperties;
 
     @EventListener(ApplicationReadyEvent.class)
     public void seedData() {
+        DevSeedProperties.Participant senderConfig = devSeedProperties.getSender();
+        DevSeedProperties.Participant recipientConfig = devSeedProperties.getRecipient();
+        String currency = devSeedProperties.getAccountCurrency();
+
         if (userRepository.count() == 0) {
             log.warn("DEV MODE: Creating default test users and accounts");
 
             UserEntity senderUser = UserEntity.builder()
-                    .username("user")
-                    .passwordHash(passwordEncoder.encode("password123"))
-                    .role("USER")
+                    .username(senderConfig.getUsername())
+                    .passwordHash(passwordEncoder.encode(senderConfig.getPassword()))
+                    .role(senderConfig.getRole())
                     .build();
 
             senderUser = userRepository.save(senderUser);
-            log.info("Default test user created: username=user, password=password123");
+            log.info("Default sender user created: username={}, password={}", senderConfig.getUsername(), senderConfig.getPassword());
 
             AccountEntity senderAccount = AccountEntity.builder()
                     .user(senderUser)
-                    .accountNumber("DEV-ACCOUNT-001")
-                    .balance(new BigDecimal("10000.00"))
-                    .currency("USD")
+                    .accountNumber(senderConfig.getAccountNumber())
+                    .balance(senderConfig.getInitialBalance())
+                    .currency(currency)
                     .build();
 
             AccountEntity savedSenderAccount = accountRepository.save(senderAccount);
-            log.info("Default sender account created: accountNumber=DEV-ACCOUNT-001, balance=10000.00 USD, accountId={}", savedSenderAccount.getId());
+            log.info("Default sender account created: accountNumber={}, balance={} {}, accountId={}",
+                    senderConfig.getAccountNumber(),
+                    senderConfig.getInitialBalance(),
+                    currency,
+                    savedSenderAccount.getId());
 
             UserEntity recipientUser = UserEntity.builder()
-                    .username("recipient")
-                    .passwordHash(passwordEncoder.encode("password123"))
-                    .role("USER")
+                    .username(recipientConfig.getUsername())
+                    .passwordHash(passwordEncoder.encode(recipientConfig.getPassword()))
+                    .role(recipientConfig.getRole())
                     .build();
 
             recipientUser = userRepository.save(recipientUser);
-            log.info("Default test user created: username=recipient, password=password123");
+            log.info("Default recipient user created: username={}, password={}", recipientConfig.getUsername(), recipientConfig.getPassword());
 
             AccountEntity recipientAccount = AccountEntity.builder()
                     .user(recipientUser)
-                    .accountNumber("DEV-ACCOUNT-002")
-                    .balance(new BigDecimal("5000.00"))
-                    .currency("USD")
+                    .accountNumber(recipientConfig.getAccountNumber())
+                    .balance(recipientConfig.getInitialBalance())
+                    .currency(currency)
                     .build();
 
             AccountEntity savedRecipientAccount = accountRepository.save(recipientAccount);
-            log.info("Default recipient account created: accountNumber=DEV-ACCOUNT-002, balance=5000.00 USD, accountId={}", savedRecipientAccount.getId());
+            log.info("Default recipient account created: accountNumber={}, balance={} {}, accountId={}",
+                    recipientConfig.getAccountNumber(),
+                    recipientConfig.getInitialBalance(),
+                    currency,
+                    savedRecipientAccount.getId());
         } else {
-            userRepository.findByUsername("user").ifPresent(user -> {
+            userRepository.findByUsername(senderConfig.getUsername()).ifPresent(user -> {
                 if (accountRepository.findByUserId(user.getId()).isEmpty()) {
                     log.warn("DEV MODE: User exists but has no account. Creating default account.");
 
                     AccountEntity defaultAccount = AccountEntity.builder()
                             .user(user)
-                            .accountNumber("DEV-ACCOUNT-001")
-                            .balance(new BigDecimal("10000.00"))
-                            .currency("USD")
+                            .accountNumber(senderConfig.getAccountNumber())
+                            .balance(senderConfig.getInitialBalance())
+                            .currency(currency)
                             .build();
 
                     AccountEntity savedAccount = accountRepository.save(defaultAccount);
-                    log.info("Default test account created for existing user: accountNumber=DEV-ACCOUNT-001, balance=10000.00 USD, accountId={}", savedAccount.getId());
+                    log.info("Default test account created for existing user: accountNumber={}, balance={} {}, accountId={}",
+                            senderConfig.getAccountNumber(),
+                            senderConfig.getInitialBalance(),
+                            currency,
+                            savedAccount.getId());
                 }
             });
 
-            UserEntity recipientUser = userRepository.findByUsername("recipient")
+            UserEntity recipientUser = userRepository.findByUsername(recipientConfig.getUsername())
                     .orElseGet(() -> {
                         log.warn("DEV MODE: Recipient user does not exist. Creating recipient user.");
                         UserEntity newRecipient = UserEntity.builder()
-                                .username("recipient")
-                                .passwordHash(passwordEncoder.encode("password123"))
-                                .role("USER")
+                                .username(recipientConfig.getUsername())
+                                .passwordHash(passwordEncoder.encode(recipientConfig.getPassword()))
+                                .role(recipientConfig.getRole())
                                 .build();
                         return userRepository.save(newRecipient);
                     });
@@ -99,13 +113,17 @@ public class DevDataInitializer {
 
                 AccountEntity recipientAccount = AccountEntity.builder()
                         .user(recipientUser)
-                        .accountNumber("DEV-ACCOUNT-002")
-                        .balance(new BigDecimal("5000.00"))
-                        .currency("USD")
+                        .accountNumber(recipientConfig.getAccountNumber())
+                        .balance(recipientConfig.getInitialBalance())
+                        .currency(currency)
                         .build();
 
                 AccountEntity savedRecipientAccount = accountRepository.save(recipientAccount);
-                log.info("Recipient account created: accountNumber=DEV-ACCOUNT-002, balance=5000.00 USD, accountId={}", savedRecipientAccount.getId());
+                log.info("Recipient account created: accountNumber={}, balance={} {}, accountId={}",
+                        recipientConfig.getAccountNumber(),
+                        recipientConfig.getInitialBalance(),
+                        currency,
+                        savedRecipientAccount.getId());
             }
         }
     }
