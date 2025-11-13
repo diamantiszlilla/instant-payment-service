@@ -14,6 +14,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.security.GeneralSecurityException;
 import java.util.Base64;
 
 @Slf4j
@@ -45,7 +46,7 @@ public class EncryptionAttributeConverter implements AttributeConverter<String, 
     @Override
     public byte[] convertToDatabaseColumn(String attribute) {
         if (attribute == null) {
-            return null;
+            return new byte[0];
         }
 
         try {
@@ -66,15 +67,15 @@ public class EncryptionAttributeConverter implements AttributeConverter<String, 
             byteBuffer.put(encryptedData);
 
             return byteBuffer.array();
-        } catch (Exception e) {
+        } catch (GeneralSecurityException e) {
             log.error("Failed to encrypt attribute", e);
-            throw new RuntimeException("Encryption failed", e);
+            throw new EncryptionOperationException("Encryption failed", e);
         }
     }
 
     @Override
     public String convertToEntityAttribute(byte[] dbData) {
-        if (dbData == null) {
+        if (dbData == null || dbData.length == 0) {
             return null;
         }
 
@@ -94,9 +95,9 @@ public class EncryptionAttributeConverter implements AttributeConverter<String, 
 
             byte[] decryptedData = cipher.doFinal(encryptedData);
             return new String(decryptedData, StandardCharsets.UTF_8);
-        } catch (Exception e) {
+        } catch (GeneralSecurityException e) {
             log.error("Failed to decrypt attribute", e);
-            throw new RuntimeException("Decryption failed", e);
+            throw new EncryptionOperationException("Decryption failed", e);
         }
     }
 
@@ -106,8 +107,8 @@ public class EncryptionAttributeConverter implements AttributeConverter<String, 
             keyGenerator.init(256);
             SecretKey secretKey = keyGenerator.generateKey();
             return Base64.getEncoder().encodeToString(secretKey.getEncoded());
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to generate encryption key", e);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new EncryptionOperationException("Failed to generate encryption key", e);
         }
     }
 }

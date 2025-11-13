@@ -28,7 +28,7 @@ class EncryptionAttributeConverterTest {
         byte[] encrypted = converter.convertToDatabaseColumn(accountNumber);
 
         assertThat(encrypted).isNotNull();
-        assertThat(encrypted.length).isGreaterThan(0);
+        assertThat(encrypted).hasSizeGreaterThan(0);
         assertThat(encrypted).isNotEqualTo(accountNumber.getBytes());
     }
 
