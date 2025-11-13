@@ -11,6 +11,7 @@ import com.alpian.instantpay.infrastructure.persistence.repository.TransactionRe
 import com.alpian.instantpay.service.exception.AccountNotFoundException;
 import com.alpian.instantpay.service.exception.IdempotencyException;
 import com.alpian.instantpay.service.exception.InsufficientFundsException;
+import com.alpian.instantpay.service.exception.OutboxMessageCreationException;
 import com.alpian.instantpay.service.mapper.PaymentMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -113,9 +114,9 @@ public class PaymentService {
                     .payload(payload)
                     .status(OutboxEventEntity.EventStatus.PENDING)
                     .build();
-        } catch (Exception e) {
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             log.error("outbox_creation_failed: txId={}", maskUuid(transaction.getId()), e);
-            throw new RuntimeException("Failed to create outbox event", e);
+            throw new OutboxMessageCreationException("Failed to serialize outbox event payload", e);
         }
     }
 

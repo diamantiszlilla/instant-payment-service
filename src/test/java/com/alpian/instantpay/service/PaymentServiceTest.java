@@ -246,16 +246,16 @@ class PaymentServiceTest {
     void shouldThrowExceptionWhenCurrencyMismatchWithSender() {
         senderAccount.setCurrency("EUR");
 
-        var recipientAccount = new AccountEntity();
-        recipientAccount.setId(paymentRequest.recipientAccountId());
-        recipientAccount.setCurrency(paymentRequest.currency());
+        AccountEntity recipientAccountForTest = new AccountEntity();
+        recipientAccountForTest.setId(paymentRequest.recipientAccountId());
+        recipientAccountForTest.setCurrency(paymentRequest.currency());
 
         when(transactionRepository.findByIdempotencyKey(idempotencyKey))
                 .thenReturn(Optional.empty());
         when(accountRepository.findByIdForUpdate(senderAccountId))
                 .thenReturn(Optional.of(senderAccount));
         when(accountRepository.findByIdForUpdate(paymentRequest.recipientAccountId()))
-                .thenReturn(Optional.of(recipientAccount));
+                .thenReturn(Optional.of(recipientAccountForTest));
 
         assertThatThrownBy(() -> paymentService.sendMoney(paymentRequest, idempotencyKey, "sender"))
                 .isInstanceOf(IllegalArgumentException.class)
