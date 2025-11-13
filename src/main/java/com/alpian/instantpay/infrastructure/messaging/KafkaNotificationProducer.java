@@ -1,12 +1,15 @@
 package com.alpian.instantpay.infrastructure.messaging;
 
+import com.alpian.instantpay.infrastructure.messaging.exception.NotificationPublishException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.common.KafkaException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @Slf4j
 @Component
@@ -20,20 +23,25 @@ public class KafkaNotificationProducer {
 
         try {
             CompletableFuture<SendResult<String, String>> future = kafkaTemplate.send(topic, payload);
+            SendResult<String, String> result = future.get();
 
-            future.whenComplete((result, exception) -> {
-                if (exception != null) {
-                    log.error("Failed to send notification to topic: {}", topic, exception);
-                    throw new RuntimeException("Failed to send Kafka message", exception);
-                } else {
-                    log.info("Notification sent successfully to topic: {}, offset: {}",
-                            topic, result.getRecordMetadata().offset());
-                }
-            });
-            future.join();
-        } catch (Exception e) {
-            log.error("Error sending notification to topic: {}", topic, e);
-            throw new RuntimeException("Failed to send notification to Kafka", e);
+            log.info("Notification sent successfully to topic: {}, offset: {}",
+                    topic, result.getRecordMetadata().offset());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Kafka send interrupted for topic: {}", topic, e);
+            throw new NotificationPublishException("Interrupted while sending Kafka notification", e);
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof KafkaException kafkaException) {
+                log.error("Kafka exception while sending notification to topic: {}", topic, kafkaException);
+                throw new NotificationPublishException("Kafka error while sending notification", kafkaException);
+            }
+            log.error("Unexpected error while sending notification to topic: {}", topic, cause);
+            throw new NotificationPublishException("Unexpected error while sending Kafka notification", cause);
+        } catch (KafkaException e) {
+            log.error("Kafka exception while sending notification to topic: {}", topic, e);
+            throw new NotificationPublishException("Kafka error while sending notification", e);
         }
     }
 }
