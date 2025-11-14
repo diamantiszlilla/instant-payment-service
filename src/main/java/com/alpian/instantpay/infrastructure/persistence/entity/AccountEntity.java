@@ -67,5 +67,3 @@ public class AccountEntity {
         updatedAt = OffsetDateTime.now();
     }
 }
-
-

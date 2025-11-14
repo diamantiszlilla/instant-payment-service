@@ -13,4 +13,3 @@ public record ErrorResponse(
         this(message, error, status, OffsetDateTime.now(), path);
     }
 }
-

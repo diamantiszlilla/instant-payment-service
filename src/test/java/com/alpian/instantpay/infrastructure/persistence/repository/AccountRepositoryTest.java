@@ -262,7 +262,6 @@ class AccountRepositoryTest extends AbstractDbIntegrationTest {
         accountRepository.saveAndFlush(account1);
         accountRepository.flush();
         
-        // Reload from database to get updated version
         AccountEntity reloaded1 = accountRepository.findById(account1.getId()).orElseThrow();
         assertThat(reloaded1.getVersion()).isGreaterThan(initialVersion);
 
@@ -271,7 +270,6 @@ class AccountRepositoryTest extends AbstractDbIntegrationTest {
         accountRepository.saveAndFlush(reloaded1);
         accountRepository.flush();
         
-        // Reload from database to get updated version
         AccountEntity reloaded2 = accountRepository.findById(account1.getId()).orElseThrow();
         assertThat(reloaded2.getVersion()).isGreaterThan(secondVersion);
     }

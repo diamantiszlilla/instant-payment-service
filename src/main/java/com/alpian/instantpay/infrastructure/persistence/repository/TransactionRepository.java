@@ -14,4 +14,3 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
 
     boolean existsByIdempotencyKey(UUID idempotencyKey);
 }
-

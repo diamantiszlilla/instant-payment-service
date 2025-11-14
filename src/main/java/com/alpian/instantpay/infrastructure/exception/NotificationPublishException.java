@@ -1,8 +1,5 @@
 package com.alpian.instantpay.infrastructure.exception;
 
-/**
- * Exception thrown when the application fails to publish a notification event to Kafka.
- */
 public class NotificationPublishException extends RuntimeException {
 
     public NotificationPublishException(String message) {
@@ -13,4 +10,3 @@ public class NotificationPublishException extends RuntimeException {
         super(message, cause);
     }
 }
-

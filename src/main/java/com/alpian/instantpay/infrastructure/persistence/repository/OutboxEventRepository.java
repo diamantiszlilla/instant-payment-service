@@ -13,4 +13,3 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEventEntity, 
 
     List<OutboxEventEntity> findByStatus(OutboxEventEntity.EventStatus status, Pageable pageable);
 }
-

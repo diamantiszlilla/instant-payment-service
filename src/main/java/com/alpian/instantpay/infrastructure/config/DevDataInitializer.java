@@ -129,24 +129,24 @@ public class DevDataInitializer {
                         savedRecipientAccount.getId());
             }
         }
-        
+
         log.info("DEV MODE: Checking existing test accounts...");
         userRepository.findByUsername(senderConfig.getUsername()).ifPresent(user -> {
             List<AccountEntity> accounts = accountRepository.findByUserId(user.getId());
-            accounts.forEach(account -> 
-                log.info("DEV MODE: Sender account available - accountId={}, accountNumber={}, balance={} {}", 
-                    account.getId(), account.getAccountNumber(), account.getBalance(), account.getCurrency())
+            accounts.forEach(account ->
+                    log.info("DEV MODE: Sender account available - accountId={}, accountNumber={}, balance={} {}",
+                            account.getId(), account.getAccountNumber(), account.getBalance(), account.getCurrency())
             );
         });
-        
+
         userRepository.findByUsername(recipientConfig.getUsername()).ifPresent(user -> {
             List<AccountEntity> accounts = accountRepository.findByUserId(user.getId());
-            accounts.forEach(account -> 
-                log.info("DEV MODE: Recipient account available - accountId={}, accountNumber={}, balance={} {}", 
-                    account.getId(), account.getAccountNumber(), account.getBalance(), account.getCurrency())
+            accounts.forEach(account ->
+                    log.info("DEV MODE: Recipient account available - accountId={}, accountNumber={}, balance={} {}",
+                            account.getId(), account.getAccountNumber(), account.getBalance(), account.getCurrency())
             );
         });
-        
+
         log.info("DEV MODE: DevDataInitializer completed.");
     }
 }
