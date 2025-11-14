@@ -27,9 +27,10 @@ class EncryptionAttributeConverterTest {
 
         byte[] encrypted = converter.convertToDatabaseColumn(accountNumber);
 
-        assertThat(encrypted).isNotNull();
-        assertThat(encrypted).hasSizeGreaterThan(0);
-        assertThat(encrypted).isNotEqualTo(accountNumber.getBytes());
+        assertThat(encrypted)
+                .isNotNull()
+                .hasSizeGreaterThan(0)
+                .isNotEqualTo(accountNumber.getBytes());
     }
 
     @Test
@@ -48,7 +49,9 @@ class EncryptionAttributeConverterTest {
     void shouldHandleNullInConvertToDatabaseColumn() {
         byte[] result = converter.convertToDatabaseColumn(null);
 
-        assertThat(result).isNull();
+        assertThat(result)
+                .isNotNull()
+                .isEmpty();
     }
 
     @Test
@@ -99,7 +102,7 @@ class EncryptionAttributeConverterTest {
         ReflectionTestUtils.setField(invalidConverter, "encryptionKeyBase64", "invalid-key");
 
         assertThatThrownBy(() -> invalidConverter.convertToDatabaseColumn("1234"))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Encryption failed");
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Invalid encryption key configuration");
     }
 }
