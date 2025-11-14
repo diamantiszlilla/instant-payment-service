@@ -1,4 +1,4 @@
-package com.alpian.instantpay.infrastructure.messaging.exception;
+package com.alpian.instantpay.infrastructure.exception;
 
 /**
  * Exception thrown when the application fails to publish a notification event to Kafka.
