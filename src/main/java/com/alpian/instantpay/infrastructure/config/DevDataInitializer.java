@@ -12,6 +12,8 @@ import org.springframework.context.event.EventListener;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Slf4j
 @Component
 @Profile({"dev", "docker"})
@@ -24,6 +26,7 @@ public class DevDataInitializer {
 
     @EventListener(ApplicationReadyEvent.class)
     public void seedData() {
+        log.info("DEV MODE: DevDataInitializer started");
         DevSeedProperties.Participant senderConfig = devSeedProperties.getSender();
         DevSeedProperties.Participant recipientConfig = devSeedProperties.getRecipient();
         String currency = devSeedProperties.getAccountCurrency();
@@ -126,5 +129,24 @@ public class DevDataInitializer {
                         savedRecipientAccount.getId());
             }
         }
+        
+        log.info("DEV MODE: Checking existing test accounts...");
+        userRepository.findByUsername(senderConfig.getUsername()).ifPresent(user -> {
+            List<AccountEntity> accounts = accountRepository.findByUserId(user.getId());
+            accounts.forEach(account -> 
+                log.info("DEV MODE: Sender account available - accountId={}, accountNumber={}, balance={} {}", 
+                    account.getId(), account.getAccountNumber(), account.getBalance(), account.getCurrency())
+            );
+        });
+        
+        userRepository.findByUsername(recipientConfig.getUsername()).ifPresent(user -> {
+            List<AccountEntity> accounts = accountRepository.findByUserId(user.getId());
+            accounts.forEach(account -> 
+                log.info("DEV MODE: Recipient account available - accountId={}, accountNumber={}, balance={} {}", 
+                    account.getId(), account.getAccountNumber(), account.getBalance(), account.getCurrency())
+            );
+        });
+        
+        log.info("DEV MODE: DevDataInitializer completed. Use GET /api/accounts to list your accounts.");
     }
 }
