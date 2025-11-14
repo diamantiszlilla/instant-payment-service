@@ -2,21 +2,21 @@ package com.alpian.instantpay.service.mapper;
 
 import com.alpian.instantpay.api.dto.PaymentResponse;
 import com.alpian.instantpay.infrastructure.persistence.entity.TransactionEntity;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
 
-@Component
-public class PaymentMapper {
-    
-    public PaymentResponse toPaymentResponse(TransactionEntity transactionEntity) {
-        return new PaymentResponse(
-            transactionEntity.getId(),
-            transactionEntity.getSenderAccount().getId(),
-            transactionEntity.getRecipientAccount().getId(),
-            transactionEntity.getAmount(),
-            transactionEntity.getCurrency(),
-            transactionEntity.getStatus().name(),
-            transactionEntity.getCreatedAt()
-        );
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface PaymentMapper {
+
+    @Mapping(source = "id", target = "transactionId")
+    @Mapping(source = "senderAccount.id", target = "senderAccountId")
+    @Mapping(source = "recipientAccount.id", target = "recipientAccountId")
+    @Mapping(source = "status", target = "status", qualifiedByName = "statusToString")
+    PaymentResponse toPaymentResponse(TransactionEntity transactionEntity);
+
+    @org.mapstruct.Named("statusToString")
+    default String statusToString(TransactionEntity.TransactionStatus status) {
+        return status != null ? status.name() : null;
     }
 }
-

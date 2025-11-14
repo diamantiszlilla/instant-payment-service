@@ -106,7 +106,8 @@ public class PaymentService {
 
     private OutboxEventEntity createOutboxEvent(TransactionEntity transaction) {
         try {
-            String payload = objectMapper.writeValueAsString(createTransactionEvent(transaction));
+            PaymentResponse paymentResponse = paymentMapper.toPaymentResponse(transaction);
+            String payload = objectMapper.writeValueAsString(paymentResponse);
             return OutboxEventEntity.builder()
                     .aggregateType("Transaction")
                     .aggregateId(transaction.getId())
@@ -118,29 +119,6 @@ public class PaymentService {
             log.error("outbox_creation_failed: txId={}", maskUuid(transaction.getId()), e);
             throw new OutboxMessageCreationException("Failed to serialize outbox event payload", e);
         }
-    }
-
-    private TransactionEvent createTransactionEvent(TransactionEntity transaction) {
-        return new TransactionEvent(
-                transaction.getId(),
-                transaction.getSenderAccount().getId(),
-                transaction.getRecipientAccount().getId(),
-                transaction.getAmount(),
-                transaction.getCurrency(),
-                transaction.getStatus().name(),
-                transaction.getCreatedAt()
-        );
-    }
-
-    private record TransactionEvent(
-            UUID transactionId,
-            UUID senderAccountId,
-            UUID recipientAccountId,
-            BigDecimal amount,
-            String currency,
-            String status,
-            java.time.OffsetDateTime createdAt
-    ) {
     }
 
     private void ensureCurrenciesMatch(String actual, String expected, String role) {
