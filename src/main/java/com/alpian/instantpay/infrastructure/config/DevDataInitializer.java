@@ -147,6 +147,6 @@ public class DevDataInitializer {
             );
         });
         
-        log.info("DEV MODE: DevDataInitializer completed. Use GET /api/accounts to list your accounts.");
+        log.info("DEV MODE: DevDataInitializer completed.");
     }
 }
