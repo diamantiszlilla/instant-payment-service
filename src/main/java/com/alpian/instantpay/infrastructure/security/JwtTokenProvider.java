@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.function.Function;
 
 @Slf4j
 @Component
@@ -43,16 +42,7 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public String getUsernameFromToken(String token) {
-        return getClaimFromToken(token, Claims::getSubject);
-    }
-
-    public <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = getAllClaimsFromToken(token);
-        return claimsResolver.apply(claims);
-    }
-
-    private Claims getAllClaimsFromToken(String token) {
+    private Claims parseTokenClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
                 .build()
@@ -62,20 +52,28 @@ public class JwtTokenProvider {
 
     public boolean validateToken(String token, UserDetails userDetails) {
         try {
-            final String username = getUsernameFromToken(token);
-            return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+            final Claims claims = parseTokenClaims(token);
+
+            final String username = claims.getSubject();
+            final Date expiration = claims.getExpiration();
+
+            final boolean usernameMatches = username.equals(userDetails.getUsername());
+            final boolean isNotExpired = expiration.after(new Date());
+
+            return usernameMatches && isNotExpired;
+
         } catch (Exception e) {
-            log.debug("Token validation failed", e);
+            log.debug("Token validation failed: {}", e.getMessage());
             return false;
         }
     }
 
-    private boolean isTokenExpired(String token) {
-        final Date expiration = getExpirationDateFromToken(token);
-        return expiration.before(new Date());
-    }
-
-    private Date getExpirationDateFromToken(String token) {
-        return getClaimFromToken(token, Claims::getExpiration);
+    public String getUsernameFromToken(String token) {
+        try {
+            return parseTokenClaims(token).getSubject();
+        } catch (Exception e) {
+            log.warn("Could not extract username from token: {}", e.getMessage());
+            return null;
+        }
     }
 }
