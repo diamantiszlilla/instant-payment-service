@@ -77,7 +77,6 @@ class PaymentServiceTest {
                 .accountNumber("1111111111")
                 .balance(new BigDecimal("1000.00"))
                 .currency("USD")
-                .version(0L)
                 .createdAt(OffsetDateTime.now())
                 .updatedAt(OffsetDateTime.now())
                 .build();
@@ -94,7 +93,6 @@ class PaymentServiceTest {
                 .accountNumber("2222222222")
                 .balance(new BigDecimal("500.00"))
                 .currency("USD")
-                .version(0L)
                 .createdAt(OffsetDateTime.now())
                 .updatedAt(OffsetDateTime.now())
                 .build();
@@ -314,7 +312,6 @@ class PaymentServiceTest {
                 .accountNumber("9999999999")
                 .balance(new BigDecimal("1000.00"))
                 .currency("USD")
-                .version(0L)
                 .createdAt(OffsetDateTime.now())
                 .updatedAt(OffsetDateTime.now())
                 .build();

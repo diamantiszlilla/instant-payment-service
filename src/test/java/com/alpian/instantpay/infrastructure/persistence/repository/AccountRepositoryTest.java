@@ -3,11 +3,7 @@ package com.alpian.instantpay.infrastructure.persistence.repository;
 import com.alpian.instantpay.AbstractDbIntegrationTest;
 import com.alpian.instantpay.infrastructure.persistence.entity.AccountEntity;
 import com.alpian.instantpay.infrastructure.persistence.entity.UserEntity;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -89,7 +85,6 @@ class AccountRepositoryTest extends AbstractDbIntegrationTest {
                 .accountNumber("1111111111")
                 .balance(new BigDecimal("1000.00"))
                 .currency("USD")
-                .version(0L)
                 .createdAt(OffsetDateTime.now())
                 .updatedAt(OffsetDateTime.now())
                 .build();
@@ -100,7 +95,6 @@ class AccountRepositoryTest extends AbstractDbIntegrationTest {
                 .accountNumber("2222222222")
                 .balance(new BigDecimal("500.00"))
                 .currency("EUR")
-                .version(0L)
                 .createdAt(OffsetDateTime.now())
                 .updatedAt(OffsetDateTime.now())
                 .build();
@@ -111,7 +105,6 @@ class AccountRepositoryTest extends AbstractDbIntegrationTest {
                 .accountNumber("3333333333")
                 .balance(new BigDecimal("2000.00"))
                 .currency("USD")
-                .version(0L)
                 .createdAt(OffsetDateTime.now())
                 .updatedAt(OffsetDateTime.now())
                 .build();
@@ -192,7 +185,6 @@ class AccountRepositoryTest extends AbstractDbIntegrationTest {
                 .accountNumber("9999999999")
                 .balance(new BigDecimal("750.00"))
                 .currency("GBP")
-                .version(0L)
                 .createdAt(OffsetDateTime.now())
                 .updatedAt(OffsetDateTime.now())
                 .build();
@@ -221,7 +213,6 @@ class AccountRepositoryTest extends AbstractDbIntegrationTest {
                 .accountNumber("4444444444")
                 .balance(new BigDecimal("100.00"))
                 .currency("USD")
-                .version(0L)
                 .createdAt(OffsetDateTime.now())
                 .updatedAt(OffsetDateTime.now())
                 .build();
@@ -234,12 +225,10 @@ class AccountRepositoryTest extends AbstractDbIntegrationTest {
     @Test
     @DisplayName("Should update account balance")
     void shouldUpdateAccountBalance() {
-        Long originalVersion = account1.getVersion();
         account1.setBalance(new BigDecimal("1500.00"));
         AccountEntity updated = accountRepository.saveAndFlush(account1);
 
         assertThat(updated.getBalance()).isEqualByComparingTo(new BigDecimal("1500.00"));
-        assertThat(updated.getVersion()).isGreaterThan(originalVersion);
     }
 
     @Test
@@ -251,26 +240,5 @@ class AccountRepositoryTest extends AbstractDbIntegrationTest {
 
         Optional<AccountEntity> deleted = accountRepository.findById(accountId);
         assertThat(deleted).isEmpty();
-    }
-
-    @Test
-    @DisplayName("Should maintain account version for optimistic locking")
-    void shouldMaintainAccountVersionForOptimisticLocking() {
-        Long initialVersion = account1.getVersion();
-        
-        account1.setBalance(new BigDecimal("1200.00"));
-        accountRepository.saveAndFlush(account1);
-        accountRepository.flush();
-        
-        AccountEntity reloaded1 = accountRepository.findById(account1.getId()).orElseThrow();
-        assertThat(reloaded1.getVersion()).isGreaterThan(initialVersion);
-
-        Long secondVersion = reloaded1.getVersion();
-        reloaded1.setBalance(new BigDecimal("1300.00"));
-        accountRepository.saveAndFlush(reloaded1);
-        accountRepository.flush();
-        
-        AccountEntity reloaded2 = accountRepository.findById(account1.getId()).orElseThrow();
-        assertThat(reloaded2.getVersion()).isGreaterThan(secondVersion);
     }
 }

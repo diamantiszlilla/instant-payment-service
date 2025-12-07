@@ -16,7 +16,6 @@ CREATE TABLE accounts (
                           account_number_encrypted BYTEA NOT NULL,
                           balance NUMERIC(19, 4) NOT NULL DEFAULT 0.0000,
                           currency CHAR(3) NOT NULL,
-                          version BIGINT NOT NULL DEFAULT 0,
                           created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
                           updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
                           CONSTRAINT fk_accounts_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,

@@ -38,10 +38,6 @@ public class AccountEntity {
     @Column(name = "currency", nullable = false, length = 3)
     private String currency;
 
-    @Version
-    @Column(name = "version", nullable = false)
-    private Long version;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
